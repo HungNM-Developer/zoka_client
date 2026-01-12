@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { translations } from '@/i18n/translations';
+import ElementalVFX from './ElementalVFX';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,7 +18,12 @@ function cn(...inputs: ClassValue[]) {
 
 export default function GameView() {
   const router = useRouter();
-  const { room, socket, leaveRoom, toggleReady, startGame, playCard, username, kickPlayer, backToLobby } = useGameStore();
+  const { 
+    room, socket, leaveRoom, toggleReady, startGame, 
+    playCard, username, kickPlayer, backToLobby, language 
+  } = useGameStore();
+
+  const t = (key: keyof typeof translations['en']) => translations[language][key];
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(20);
   const [showRoundOverlay, setShowRoundOverlay] = useState(false);
@@ -101,7 +108,7 @@ export default function GameView() {
     if (!room) return;
     const url = `${window.location.origin}/room/${room.code}`;
     navigator.clipboard.writeText(url);
-    toast.success('LINK COPIED', { description: 'Invite link has been copied to clipboard.' });
+    toast.success(t('link_copied'), { description: t('link_copied_desc') });
   };
 
   // Calculate merged element totals for the current round
@@ -135,49 +142,71 @@ export default function GameView() {
                animate={{ y: 0, opacity: 1 }}
                className="text-center mb-12"
              >
-                <h2 className="text-5xl font-black italic tracking-tighter text-glow mb-2 uppercase">Round {lastRoundResults.round} Analysis</h2>
-                <p className="text-white/20 font-black tracking-[0.5em] uppercase text-xs italic">Intelligence Report Compiled</p>
+                <h2 className="text-5xl font-black italic tracking-tighter text-glow mb-2 uppercase">{t('round_analysis')} {lastRoundResults.round}</h2>
+                <p className="text-white/20 font-black tracking-[0.5em] uppercase text-xs italic">{t('intel_report')}</p>
              </motion.div>
 
-             <div className="w-full max-w-3xl space-y-4 mb-20">
+              <div className="w-full max-w-4xl space-y-6 mb-20 overflow-y-auto max-h-[60vh] px-4 custom-scrollbar">
                 {lastRoundResults.results.map((res: any, i: number) => {
                   const p = room.players[res.playerId];
                   return (
                     <motion.div 
                       key={res.playerId}
-                      initial={{ x: -20, opacity: 0 }}
+                      initial={{ x: i % 2 === 0 ? -100 : 100, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="bg-white/5 border border-white/10 rounded-3xl p-6 flex items-center justify-between"
+                      transition={{ delay: i * 0.1, type: 'spring', damping: 15 }}
+                      className={cn(
+                        "relative border rounded-[2.5rem] p-8 flex items-center justify-between overflow-hidden transition-all duration-500",
+                        res.change > 0 
+                          ? "bg-green-500/[0.03] border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.1)]" 
+                          : res.change < 0 
+                          ? "bg-red-500/[0.03] border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.1)]"
+                          : "bg-white/[0.02] border-white/10"
+                      )}
                     >
-                       <div className="flex items-center gap-6">
-                          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center font-black text-xl">{p?.username[0].toUpperCase()}</div>
+                       {/* Background Elemental VFX */}
+                       <ElementalVFX 
+                         element={res.cardElement} 
+                         className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
+                       />
+
+                       <div className="flex items-center gap-8 relative z-10">
+                          <div className={cn(
+                             "w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl shadow-2xl transition-all",
+                             res.change > 0 ? "bg-green-500 text-white" : res.change < 0 ? "bg-red-500 text-white" : "bg-white/10"
+                          )}>
+                             {p?.username[0].toUpperCase()}
+                          </div>
                           <div className="text-left">
-                             <p className="text-xl font-black uppercase tracking-widest">{p?.username}</p>
-                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Card: {res.cardStars}★</p>
+                             <p className="text-2xl font-black uppercase tracking-tighter leading-tight mb-1">{p?.username}</p>
+                             <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-white/5 rounded text-[8px] font-black uppercase tracking-widest text-white/40 border border-white/5">{res.cardElement}</span>
+                                <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.2em]">{t('card_stars')}: {res.cardStars}★</p>
+                             </div>
                           </div>
                        </div>
-                       <div className="flex items-center gap-8">
+
+                       <div className="flex items-center gap-12 relative z-10">
                           <div className={cn(
-                            "text-3xl font-black italic tabular-nums flex items-center gap-2",
-                            res.change > 0 ? "text-green-500" : res.change < 0 ? "text-red-500" : "text-white/40"
+                            "text-5xl font-black italic tabular-nums flex items-center gap-3",
+                            res.change > 0 ? "text-green-400 text-glow" : res.change < 0 ? "text-red-400" : "text-white/20"
                           )}>
                              {res.change > 0 ? `+${res.change}` : res.change < 0 ? res.change : "±0"}
-                             <Star size={20} className={res.change > 0 ? "fill-green-500" : res.change < 0 ? "fill-red-500" : "fill-white/20"} />
+                             <Star size={32} className={res.change > 0 ? "fill-green-400" : res.change < 0 ? "fill-red-400" : "fill-white/10"} />
                           </div>
-                          <div className="h-10 w-px bg-white/10" />
+                          <div className="h-16 w-px bg-white/10" />
                           <div className="text-right">
-                             <p className="text-[10px] font-black opacity-20 uppercase tracking-widest">Updated Rating</p>
-                             <p className="text-2xl font-black italic text-yellow-500">{res.newTotal}★</p>
+                             <p className="text-[10px] font-black opacity-20 uppercase tracking-[0.4em] mb-1">{t('updated_rating')}</p>
+                             <p className="text-4xl font-black italic text-yellow-500 tabular-nums leading-none tracking-tighter">{res.newTotal}★</p>
                           </div>
                        </div>
                     </motion.div>
                   );
                 })}
-             </div>
+              </div>
 
              <div className="flex flex-col items-center gap-4">
-                <span className="text-[10px] font-black tracking-[0.5em] text-primary uppercase">Protocol Restarting In</span>
+                <span className="text-[10px] font-black tracking-[0.5em] text-primary uppercase">{t('protocol_restarting')}</span>
                 <div className="text-8xl font-black italic text-glow animate-pulse">{countdown}</div>
              </div>
           </motion.div>
@@ -198,14 +227,14 @@ export default function GameView() {
              <Star className="text-white fill-white" size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-black tracking-tighter italic bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">ZOKA ARENA</h1>
-            <p className="text-[8px] font-black tracking-[0.4em] opacity-30 mt-0.5">SECTOR: {room.code}</p>
+            <h1 className="text-xl font-black tracking-tighter italic bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">{t('warzone')} ARENA</h1>
+            <p className="text-[8px] font-black tracking-[0.4em] opacity-30 mt-0.5 uppercase">{t('sector_access')}: {room.code}</p>
           </div>
         </div>
         
         <div className="flex items-center gap-6">
           <div className="flex flex-col items-end">
-             <span className="text-[8px] font-black tracking-[0.3em] opacity-30 uppercase">Commander Rating</span>
+             <span className="text-[8px] font-black tracking-[0.3em] opacity-30 uppercase">{t('commander_rank')}</span>
              <div className="flex items-center gap-2">
                 <span className="text-xl font-black text-yellow-500 italic tabular-nums">{me?.stars}★</span>
              </div>
@@ -223,91 +252,228 @@ export default function GameView() {
       </header>
 
       {room.status === RoomStatus.WAITING ? (
-        <div className="flex-grow flex flex-col items-center justify-center p-8 gap-12">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-4"
-          >
-             <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-black tracking-[0.3em] text-primary uppercase">Recruitment Phase</span>
-             </div>
-             <h2 className="text-5xl md:text-7xl font-black tracking-tighter italic uppercase text-glow">Boarding Protocol</h2>
-             <div className="flex items-center justify-center gap-4">
-               <p className="text-white/20 text-xs font-bold tracking-[0.4em] uppercase">Sector Access: {room.code}</p>
-               <button 
-                 onClick={copyInviteLink}
-                 className="flex items-center gap-2 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all"
-               >
-                 <Share2 size={12} /> Copy Invite
-               </button>
-             </div>
-          </motion.div>
+        <div className="flex-grow flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
+          
+          {/* Left Panel: Intelligence & Settings */}
+          <aside className="lg:col-span-3 border-r border-white/5 bg-black/40 p-8 flex flex-col gap-10 overflow-y-auto no-scrollbar">
+             <div className="space-y-6">
+                <div className="space-y-1">
+                   <h3 className="text-[10px] font-black tracking-[0.4em] text-primary/60 uppercase italic">{t('room_settings')}</h3>
+                   <div className="h-px w-full bg-gradient-to-r from-primary/20 to-transparent" />
+                </div>
+                
+                <div className="space-y-4">
+                   <div className="glass-premium p-5 rounded-2xl border-white/5 space-y-3">
+                      <div className="flex items-center justify-between text-[10px] font-black tracking-widest uppercase opacity-40">
+                         <span>{t('units_limit')}</span>
+                         <Users size={14} />
+                      </div>
+                      <p className="text-2xl font-black italic tabular-nums leading-none">{room.maxPlayers} <span className="text-[10px] opacity-20 not-italic">MAX</span></p>
+                   </div>
+                   
+                   <div className="glass-premium p-5 rounded-2xl border-white/5 space-y-3">
+                      <div className="flex items-center justify-between text-[10px] font-black tracking-widest uppercase opacity-40">
+                         <span>Engagement</span>
+                         <Clock size={14} />
+                      </div>
+                      <p className="text-2xl font-black italic tabular-nums leading-none">10 <span className="text-[10px] opacity-20 not-italic">ROUNDS</span></p>
+                   </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
-            {players.map((p) => (
-              <motion.div 
-                layout
-                key={p.id} 
-                className={cn(
-                  "glass-premium p-8 rounded-[2.5rem] flex flex-col items-center gap-6 relative overflow-hidden transition-all duration-500 border border-white/5",
-                  p.ready ? 'border-green-500/30 bg-green-500/5' : 'opacity-60'
-                )}
-              >
-                {isHost && p.id !== socket?.id && (
-                  <button 
-                    onClick={() => kickPlayer(p.id)}
-                    className="absolute top-6 right-6 w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 flex items-center justify-center transition-all border border-red-500/20"
-                    title="Kick Combatant"
+                   <div className="glass-premium p-5 rounded-2xl border-white/5 space-y-3">
+                      <div className="flex items-center justify-between text-[10px] font-black tracking-widest uppercase opacity-40">
+                         <span>Response Time</span>
+                         <Activity size={14} />
+                      </div>
+                      <p className="text-2xl font-black italic tabular-nums leading-none">20s <span className="text-[10px] opacity-20 not-italic">TIMEOUT</span></p>
+                   </div>
+                </div>
+             </div>
+
+             <div className="space-y-6">
+                <div className="space-y-1">
+                   <h3 className="text-[10px] font-black tracking-[0.4em] text-secondary/60 uppercase italic">{t('sector_access')}</h3>
+                   <div className="h-px w-full bg-gradient-to-r from-secondary/20 to-transparent" />
+                </div>
+                
+                <div className="glass-premium p-6 rounded-3xl border-white/5 text-center space-y-6">
+                   <div className="space-y-1">
+                      <p className="text-[8px] font-black tracking-[0.5em] text-white/20 uppercase">Transmission Code</p>
+                      <p className="text-4xl font-black italic tracking-tighter text-white font-mono">{room.code}</p>
+                   </div>
+                   <button 
+                     onClick={copyInviteLink}
+                     className="w-full flex items-center justify-center gap-3 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase transition-all group"
+                   >
+                     <Share2 size={14} className="group-hover:scale-110 transition-transform" /> {t('copy_invite')}
+                   </button>
+                   <p className="text-[9px] text-white/20 italic font-medium">{t('invite_friends')}</p>
+                </div>
+             </div>
+          </aside>
+
+          {/* Central Area: Combatant Grid */}
+          <main className="lg:col-span-9 p-8 md:p-12 flex flex-col gap-10 overflow-y-auto no-scrollbar relative">
+             <div className="absolute inset-0 cyber-grid opacity-[0.03] pointer-events-none" />
+             
+             <div className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-white/5 pb-8">
+                <div className="space-y-1">
+                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                      <Activity size={12} className="text-primary animate-pulse" />
+                      <span className="text-[9px] font-black tracking-[0.3em] text-primary uppercase">{t('recruitment_phase')}</span>
+                   </div>
+                   <h2 className="text-5xl font-black italic tracking-tighter uppercase text-glow">{t('boarding_protocol')}</h2>
+                </div>
+                
+                <div className="flex items-center gap-4 bg-white/5 px-6 py-4 rounded-3xl border border-white/10 backdrop-blur-md">
+                   <div className="text-right">
+                      <p className="text-[8px] font-black opacity-30 uppercase tracking-[0.3em] mb-1">Combatant Capacity</p>
+                      <div className="flex items-center gap-3">
+                         <span className="text-xl font-black italic tabular-nums">{players.length} / {room.maxPlayers}</span>
+                         <div className="flex gap-1">
+                            {[...Array(room.maxPlayers)].map((_, i) => (
+                               <div key={i} className={cn("w-1.5 h-4 rounded-full", i < players.length ? "bg-primary" : "bg-white/10")} />
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 relative z-10">
+               {players.map((p) => (
+                 <motion.div 
+                   layout
+                   key={p.id} 
+                   initial={{ opacity: 0, scale: 0.9 }}
+                   animate={{ opacity: 1, scale: 1 }}
+                   className={cn(
+                     "glass-premium p-8 rounded-[2.5rem] flex items-center gap-6 relative overflow-hidden transition-all duration-500 border group",
+                     p.ready 
+                        ? 'border-green-500/40 bg-green-500/[0.05] shadow-[0_0_50px_rgba(34,197,94,0.1)]' 
+                        : 'border-white/5 hover:border-white/10'
+                   )}
+                 >
+                   <div className="relative">
+                      <div className={cn(
+                        "w-24 h-24 rounded-3xl flex items-center justify-center text-4xl font-black shadow-2xl transition-all duration-500 relative z-10",
+                        p.ready ? 'bg-green-500 text-white scale-105' : 'bg-white/5 text-white/20'
+                      )}>
+                         {p.username[0].toUpperCase()}
+                      </div>
+                      {p.ready && (
+                        <motion.div 
+                          layoutId={`ready-glow-${p.id}`}
+                          className="absolute -inset-2 bg-green-500/20 blur-xl rounded-full -z-10" 
+                        />
+                      )}
+                      <div className={cn(
+                        "absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-[#020617] flex items-center justify-center",
+                        p.ready ? "bg-green-500" : "bg-white/10"
+                      )}>
+                         {p.ready ? <ShieldCheck size={12} className="text-white" /> : <Loader2 size={12} className="text-white/20 animate-spin" />}
+                      </div>
+                   </div>
+
+                   <div className="flex-grow space-y-1">
+                      <div className="flex items-center justify-between">
+                         <p className="font-black tracking-widest text-sm uppercase flex items-center gap-2">
+                           {p.username}
+                           {p.id === socket?.id && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-lg border border-primary/30 italic">YOU</span>}
+                         </p>
+                         {isHost && p.id !== socket?.id && (
+                           <button 
+                             onClick={() => kickPlayer(p.id)}
+                             className="text-red-500 hover:scale-110 transition-transform p-1"
+                             title={t('kick_combatant')}
+                           >
+                             <UserMinus size={14} />
+                           </button>
+                         )}
+                      </div>
+                      <p className={cn(
+                        "text-[9px] font-black tracking-widest uppercase italic transition-colors",
+                        p.ready ? 'text-green-500' : 'text-white/10'
+                      )}>
+                        {p.ready ? t('ready_to_strike') : t('preparing')}
+                      </p>
+                   </div>
+
+                   <div className="absolute top-0 right-0 p-4 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
+                      <Swords size={60} />
+                   </div>
+                 </motion.div>
+               ))}
+               
+               {/* Empty Slots */}
+               {[...Array(Math.max(0, room.maxPlayers - players.length))].slice(0, 6).map((_, i) => (
+                  <div key={`empty-${i}`} className="border border-dashed border-white/5 p-8 rounded-[2.5rem] flex items-center gap-6 opacity-20 bg-white/[0.01]">
+                     <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center">
+                        <Users size={24} className="text-white/20" />
+                     </div>
+                     <div className="space-y-2">
+                        <div className="w-20 h-2 bg-white/10 rounded" />
+                        <div className="w-12 h-1.5 bg-white/5 rounded" />
+                     </div>
+                  </div>
+               ))}
+             </div>
+
+             {/* Controls Anchor at Bottom */}
+             <div className="mt-auto pt-10 flex flex-col items-center gap-6 relative z-10">
+                <AnimatePresence mode="wait">
+                   {players.length < 4 ? (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="flex items-center gap-3 text-red-400/60 font-black text-[10px] tracking-widest uppercase italic bg-red-500/5 px-6 py-3 rounded-full border border-red-500/10"
+                      >
+                         <Info size={14} />
+                         {t('min_players_warning')}
+                      </motion.div>
+                   ) : players.some(p => !p.ready) ? (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-3 text-yellow-500/60 font-black text-[10px] tracking-widest uppercase italic bg-yellow-500/5 px-6 py-3 rounded-full border border-yellow-500/10"
+                      >
+                         <Loader2 size={14} className="animate-spin" />
+                         {t('waiting_for_all_ready')}
+                      </motion.div>
+                   ) : null}
+                </AnimatePresence>
+
+                <div className="flex flex-col md:flex-row gap-6 w-full max-w-xl">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => toggleReady(!me?.ready)}
+                    className={cn(
+                      "flex-1 py-6 rounded-3xl font-black tracking-[0.4em] text-xs transition-all border uppercase italic relative overflow-hidden group",
+                      me?.ready 
+                        ? 'bg-green-500 border-green-400 text-white shadow-[0_0_40px_rgba(34,197,94,0.3)]' 
+                        : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'
+                    )}
                   >
-                    <UserMinus size={14} />
-                  </button>
-                )}
-                <div className={cn(
-                  "w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black shadow-2xl relative",
-                  p.ready ? 'bg-green-500 text-white' : 'bg-white/5 text-white/20'
-                )}>
-                   {p.username[0].toUpperCase()}
+                    <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                    {me?.ready ? t('ready') : t('mark_ready')}
+                  </motion.button>
+                  
+                  {isHost && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={startGame}
+                      disabled={players.length < 4 || players.some(p => !p.ready)}
+                      className="flex-1 py-6 rounded-3xl bg-primary text-white font-black tracking-[0.4em] text-xs disabled:opacity-20 shadow-[0_0_50px_rgba(168,85,247,0.4)] border border-primary/50 uppercase italic relative group"
+                    >
+                      <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                      {t('initialize_battle')}
+                    </motion.button>
+                  )}
                 </div>
-                <div className="text-center space-y-1">
-                  <p className="font-black tracking-widest text-xs uppercase">{p.username} {p.id === socket?.id && '(ME)'}</p>
-                   <span className={cn(
-                     "text-[8px] font-black tracking-widest uppercase",
-                     p.ready ? 'text-green-500' : 'text-white/10'
-                   )}>
-                    {p.ready ? 'READY TO STRIKE' : 'PREPARING'}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-6">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => toggleReady(!me?.ready)}
-              className={cn(
-                "px-12 py-5 rounded-2xl font-black tracking-[0.3em] text-sm transition-all border",
-                me?.ready ? 'bg-green-500 border-green-400 shadow-2xl shadow-green-500/20' : 'bg-white/5 border-white/10'
-              )}
-            >
-              {me?.ready ? 'READY' : 'MARK READY'}
-            </motion.button>
-            
-            {isHost && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={startGame}
-                disabled={players.length < 4 || players.some(p => !p.ready)}
-                className="px-12 py-5 rounded-2xl bg-primary text-white font-black tracking-[0.3em] text-sm disabled:opacity-20 shadow-2xl shadow-primary/40 border border-primary/50"
-              >
-                INITIALIZE BATTLE
-              </motion.button>
-            )}
-          </div>
+             </div>
+          </main>
         </div>
       ) : room.status === RoomStatus.PLAYING ? (
         <div className="flex-grow grid lg:grid-cols-12 gap-0 overflow-hidden">
@@ -317,14 +483,14 @@ export default function GameView() {
              <div className="flex items-center justify-between mb-2 px-1">
                 <div className="flex items-center gap-2">
                    <Activity size={12} className="text-primary" />
-                   <h3 className="text-[9px] font-black tracking-[0.4em] opacity-30 uppercase">Standings</h3>
+                   <h3 className="text-[9px] font-black tracking-[0.4em] opacity-30 uppercase">{t('standings')}</h3>
                 </div>
                 <button 
                   onClick={() => setShowHistoryModal(true)}
                   className="px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg flex items-center gap-1.5 transition-all"
                 >
                    <History size={10} className="text-secondary" />
-                   <span className="text-[8px] font-black uppercase tracking-widest text-secondary">Logs</span>
+                   <span className="text-[8px] font-black uppercase tracking-widest text-secondary">{t('logs')}</span>
                 </button>
              </div>
 
@@ -365,7 +531,7 @@ export default function GameView() {
              </div>
 
              <div className="pt-4 border-t border-white/5 space-y-3 mt-auto">
-                <h4 className="text-[8px] font-black tracking-[0.4em] opacity-30 uppercase px-1">Element Clusters</h4>
+                <h4 className="text-[8px] font-black tracking-[0.4em] opacity-30 uppercase px-1">{t('element_clusters')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                    {Object.entries(elementTotals).map(([el, total]) => (
                       <div key={el} className="bg-white/5 p-2 rounded-lg border border-white/5 flex flex-col items-center">
@@ -382,12 +548,12 @@ export default function GameView() {
             <div className="flex items-center justify-between px-8 py-4 bg-black/20 border-b border-white/5 z-20">
                <div className="flex items-center gap-6">
                   <div className="flex flex-col">
-                     <span className="text-[8px] font-black tracking-[0.4em] opacity-30 uppercase">Engagement Round</span>
+                     <span className="text-[8px] font-black tracking-[0.4em] opacity-30 uppercase">{t('engagement_round')}</span>
                      <span className="text-2xl font-black italic tracking-tighter text-primary">0{room.round} <span className="text-white/20">/ 10</span></span>
                   </div>
                   <div className="h-10 w-px bg-white/5" />
                   <div className="flex flex-col">
-                     <span className="text-[8px] font-black tracking-[0.4em] opacity-30 uppercase">Local Time Remaining</span>
+                     <span className="text-[8px] font-black tracking-[0.4em] opacity-30 uppercase">{t('time_remaining')}</span>
                      <div className="flex items-center gap-2">
                         <Clock size={14} className={cn(timeLeft < 4 ? "text-red-500 animate-pulse" : "text-primary")} />
                         <span className={cn("text-2xl font-black italic tabular-nums tracking-tighter", timeLeft < 4 ? "text-red-500" : "text-white")}>
@@ -400,43 +566,123 @@ export default function GameView() {
                <div className="px-6 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md flex items-center gap-3">
                   <div className={cn("w-2 h-2 rounded-full", myTurn ? "bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" : "bg-white/10")} />
                   <span className="text-[10px] font-black tracking-[0.3em] uppercase italic">
-                     {myTurn ? "COMMANDER AUTHORIZED" : "INTEL UPLOADING..."}
+                     {myTurn ? t('commander_authorized') : t('intel_uploading')}
                   </span>
                </div>
             </div>
 
             {/* Tabletop */}
-            <div className="flex-grow p-8 flex flex-col items-center justify-center relative bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.05)_0%,transparent_70%)] overflow-y-auto no-scrollbar">
-               <div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none" 
-                    style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+            <div className="flex-grow flex flex-col items-center justify-center relative overflow-hidden arena-container bg-[#020617]">
+               {/* 3D Arena Surface */}
+               <div className="absolute inset-0 arena-surface pointer-events-none flex items-center justify-center">
+                  {/* Dynamic Floor Grid */}
+                  <div className="absolute w-[150%] h-[150%] cyber-grid opacity-[0.05] [mask-image:radial-gradient(circle_at_50%_50%,black_30%,transparent_70%)]" />
+                  
+                  {/* Concentric Rings */}
+                  <div className="absolute w-[300px] h-[300px] border border-primary/20 rounded-full animate-spin-slow" />
+                  <div className="absolute w-[500px] h-[500px] border border-secondary/10 rounded-full animate-rotate-slow" />
+                  <div className="absolute w-[800px] h-[800px] border border-white/5 rounded-full animate-spin-slow duration-[30s]" />
+               </div>
 
-               <div className="flex flex-wrap justify-center gap-8 relative z-10 max-w-4xl">
+               {/* Arena Core (Central Energy Source) */}
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0">
+                  <div className="w-32 h-32 bg-primary/40 rounded-full blur-[60px] animate-core" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                     <div className="w-16 h-16 cyber-ring rounded-full flex items-center justify-center opacity-30">
+                        <Zap size={24} className="text-primary animate-pulse" />
+                     </div>
+                  </div>
+               </div>
+
+               {/* Cards Container - Now using calculated positions for visual interest */}
+               <div className="relative z-10 w-full h-full flex items-center justify-center py-20">
                   <AnimatePresence>
-                    {players.filter(p => p.hasPlayed).map((p) => (
-                       <motion.div
-                        key={p.id}
-                        initial={{ scale: 0, y: 50, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        className="relative"
-                       >
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center opacity-40">
-                             <span className="text-[7px] font-black tracking-[0.3em] uppercase">{p.username}</span>
-                          </div>
-                          <CardComponent 
-                            element={p.playedCard?.element || Element.FIRE} 
-                            stars={p.playedCard?.stars || 0} 
-                            disabled 
-                            size="md"
-                          />
-                       </motion.div>
-                    ))}
+                    {players.filter(p => p.hasPlayed).map((p, i, filtered) => {
+                       // Circular formation layout
+                       const total = filtered.length;
+                       const angle = (i / total) * (Math.PI * 2) - Math.PI / 2;
+                       const radius = total > 1 ? 250 : 0;
+                       const x = Math.cos(angle) * radius;
+                       const y = Math.sin(angle) * (radius * 0.4); // Tilted perspective adjustment
+
+                       return (
+                        <motion.div
+                          key={p.id}
+                          initial={{ scale: 0, x: 0, y: -500, opacity: 0, rotateY: 90 }}
+                          animate={{ scale: 1, x, y, opacity: 1, rotateY: 0 }}
+                          transition={{ 
+                            type: 'spring', 
+                            damping: 12, 
+                            stiffness: 100,
+                            delay: i * 0.05
+                          }}
+                          className="absolute perspective-1000 group"
+                        >
+                           {/* Holographic Platform */}
+                           <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-8 bg-primary/10 blur-xl rounded-full scale-x-150 rotateX-90 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                           {/* Landing Spark VFX */}
+                           <motion.div 
+                             initial={{ scale: 0, opacity: 0 }}
+                             animate={{ scale: [0, 2], opacity: [1, 0] }}
+                             transition={{ duration: 0.6 }}
+                             className="absolute inset-0 border border-primary/40 rounded-[3rem] z-0 blur-md"
+                           />
+
+                           <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+                              <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-2">
+                                 <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_var(--color-primary)]" />
+                                 <span className="text-[10px] font-black tracking-[0.2em] uppercase text-white">{p.username}</span>
+                              </div>
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: 40 }}
+                                className="h-0.5 bg-primary/40 rounded-full"
+                              />
+                           </div>
+
+                           <div className="relative group-hover:-translate-y-4 group-hover:rotate-x-[-10deg] transition-all duration-500">
+                              <CardComponent 
+                                element={p.playedCard?.element || Element.FIRE} 
+                                stars={p.playedCard?.stars || 0} 
+                                disabled 
+                                size="lg"
+                                className="shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] border-white/10"
+                              />
+                              {/* Element Back-Glow */}
+                              <div className="absolute inset-0 -z-10 group-hover:opacity-100 opacity-0 transition-opacity blur-[50px]">
+                                 <ElementalVFX element={p.playedCard?.element || Element.FIRE} className="scale-150" />
+                              </div>
+                           </div>
+                        </motion.div>
+                       );
+                    })}
                   </AnimatePresence>
                   
                   {players.filter(p => p.hasPlayed).length === 0 && (
-                     <div className="flex flex-col items-center justify-center gap-6 opacity-10">
-                        <Swords size={120} strokeWidth={1} />
-                        <p className="text-xl font-black tracking-[1em] italic uppercase">Awaiting Clash</p>
-                     </div>
+                     <motion.div 
+                       initial={{ opacity: 0, scale: 0.9 }}
+                       animate={{ opacity: 1, scale: 1 }}
+                       className="flex flex-col items-center justify-center gap-12 relative z-0"
+                     >
+                        <div className="relative">
+                           <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full animate-pulse-slow scale-150" />
+                           <Swords size={200} strokeWidth={0.5} className="text-white opacity-10 animate-pulse" />
+                        </div>
+                        <div className="flex flex-col items-center gap-4">
+                           <p className="text-4xl font-black tracking-[1.2em] italic uppercase text-white/10 ml-[1.2em]">{t('awaiting_clash')}</p>
+                           <div className="flex gap-4">
+                              {[...Array(3)].map((_, i) => (
+                                <motion.div 
+                                  key={i}
+                                  animate={{ scaleY: [1, 2, 1], opacity: [0.1, 0.3, 0.1] }}
+                                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                                  className="w-1 h-8 bg-primary rounded-full"
+                                />
+                              ))}
+                           </div>
+                        </div>
+                     </motion.div>
                   )}
                </div>
 
@@ -446,7 +692,7 @@ export default function GameView() {
                      <Zap size={20} className="text-primary animate-pulse" />
                      <div className="absolute bottom-full left-0 mb-4 w-64 glass-premium p-6 rounded-[2rem] border border-white/10 opacity-0 group-hover:opacity-100 transition-all pointer-events-none translate-y-2 group-hover:translate-y-0 shadow-2xl z-50">
                         <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 pb-2 border-b border-white/5 flex items-center gap-2">
-                           <Swords size={12} /> Tactical Guide
+                           <Swords size={12} /> {t('tactical_guide')}
                         </p>
                         <div className="space-y-3 text-[10px] font-bold">
                            <div className="flex items-center justify-between text-red-400/80">
@@ -479,10 +725,10 @@ export default function GameView() {
              <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
                    <SwatchBook size={16} className="text-primary" />
-                   <h3 className="text-[10px] font-black tracking-[0.4em] opacity-30 uppercase">My Inventory</h3>
+                   <h3 className="text-[10px] font-black tracking-[0.4em] opacity-30 uppercase">{t('my_inventory')}</h3>
                 </div>
                 <div className="px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
-                   <span className="text-[9px] font-black text-primary">{me?.hand.length} Modules</span>
+                   <span className="text-[9px] font-black text-primary">{me?.hand.length} {t('modules')}</span>
                 </div>
              </div>
 
@@ -504,7 +750,7 @@ export default function GameView() {
                       }}
                       className="w-full bg-gradient-to-r from-primary to-secondary text-white py-5 rounded-2xl font-black italic tracking-[0.3em] shadow-[0_0_30px_rgba(168,85,247,0.3)] border border-primary/50 text-sm flex items-center justify-center gap-3"
                     >
-                      EXECUTE DEPLOYMENT <Gavel size={18} />
+                      {t('execute_deployment')} <Gavel size={18} />
                     </motion.button>
                   </motion.div>
                 )}
@@ -542,7 +788,7 @@ export default function GameView() {
              {!myTurn && currentTurnPlayer && (
                 <div className="mt-auto p-4 bg-white/5 rounded-2xl border border-dashed border-white/10 text-center">
                    <Loader2 size={24} className="animate-spin mx-auto text-primary/30 mb-2" />
-                   <p className="text-[9px] font-black tracking-[0.2em] opacity-40 uppercase">Waiting for {currentTurnPlayer.username}</p>
+                   <p className="text-[9px] font-black tracking-[0.2em] opacity-40 uppercase">{t('waiting_for')} {currentTurnPlayer.username}</p>
                 </div>
              )}
           </aside>
@@ -561,8 +807,8 @@ export default function GameView() {
             </motion.div>
 
             <div className="space-y-4">
-               <h2 className="text-6xl font-black italic tracking-tighter uppercase leading-none">Victory Tally</h2>
-               <p className="text-white/20 font-black tracking-[0.6em] uppercase text-xs italic">Protocol Session Terminated</p>
+               <h2 className="text-6xl font-black italic tracking-tighter uppercase leading-none">{t('victory_tally')}</h2>
+               <p className="text-white/20 font-black tracking-[0.6em] uppercase text-xs italic">{t('protocol_terminated')}</p>
             </div>
             
             <div className="w-full max-w-2xl space-y-3">
@@ -586,7 +832,7 @@ export default function GameView() {
                        </div>
                        <div className="text-left">
                           <p className="text-xl font-black uppercase tracking-widest leading-none mb-1">{p.username}</p>
-                          <p className="text-[8px] font-black opacity-30 tracking-widest uppercase">{i === 0 ? 'Arena Superior' : 'Combatant'}</p>
+                          <p className="text-[8px] font-black opacity-30 tracking-widest uppercase">{i === 0 ? t('arena_superior') : t('combatant')}</p>
                        </div>
                     </div>
                     <div className="flex items-center gap-6 text-right">
@@ -604,7 +850,7 @@ export default function GameView() {
                   onClick={backToLobby}
                   className="bg-primary text-white px-12 py-5 rounded-2xl font-black text-sm tracking-[0.3em] shadow-2xl uppercase italic border border-primary/50"
                 >
-                  REDEPLOY TO LOBBY
+                  {t('redeploy_lobby')}
                 </motion.button>
               )}
               
@@ -614,7 +860,7 @@ export default function GameView() {
                  onClick={handleLeave}
                  className="bg-white/5 hover:bg-white/10 text-white px-12 py-5 rounded-2xl font-black text-sm tracking-[0.3em] shadow-2xl uppercase italic border border-white/10"
               >
-                 EXIT ARENA
+                 {t('exit_arena')}
               </motion.button>
             </div>
         </div>
@@ -643,8 +889,8 @@ export default function GameView() {
                          <History size={24} className="text-secondary" />
                       </div>
                       <div>
-                         <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Battle Archives</h2>
-                         <p className="text-[10px] font-black tracking-[0.4em] opacity-30 uppercase mt-1">Full Engagement History</p>
+                         <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">{t('battle_archives')}</h2>
+                         <p className="text-[10px] font-black tracking-[0.4em] opacity-30 uppercase mt-1">{t('full_history')}</p>
                       </div>
                    </div>
                    <button 
@@ -659,13 +905,13 @@ export default function GameView() {
                    {room.history.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-10">
                          <History size={64} strokeWidth={1} />
-                         <p className="text-sm font-black tracking-[0.3em] uppercase italic">Archives Empty</p>
+                         <p className="text-sm font-black tracking-[0.3em] uppercase italic">{t('archives_empty')}</p>
                       </div>
                    ) : (
                       [...room.history].reverse().map((roundData, rIdx) => (
                          <div key={rIdx} className="space-y-4">
                             <div className="flex items-center gap-4">
-                               <span className="text-xs font-black italic text-primary uppercase tracking-widest whitespace-nowrap">Round {roundData.round}</span>
+                               <span className="text-xs font-black italic text-primary uppercase tracking-widest whitespace-nowrap">{t('engagement_round')} {roundData.round}</span>
                                <div className="h-px w-full bg-gradient-to-r from-primary/30 to-transparent" />
                             </div>
                             
@@ -681,7 +927,7 @@ export default function GameView() {
                                            </div>
                                            <div className="flex flex-col overflow-hidden">
                                               <span className="text-[10px] font-black uppercase tracking-widest truncate">{p.username}</span>
-                                              <span className="text-[8px] font-bold text-white/20 uppercase tabular-nums">Used {res.cardStars}★ {res.cardElement}</span>
+                                              <span className="text-[8px] font-bold text-white/20 uppercase tabular-nums">{t('used')} {res.cardStars}★ {res.cardElement}</span>
                                            </div>
                                         </div>
                                         <div className="text-right">

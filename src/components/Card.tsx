@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Flame, Droplets, Wind, Mountain, Zap, Snowflake, Star, Sparkles } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import ElementalVFX from './ElementalVFX';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -119,10 +120,17 @@ export default function Card({ element, stars, selected, onClick, disabled, isRe
       <div className={cn("absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b opacity-0 group-hover:opacity-100 transition-opacity duration-700 -z-10", config.color)} />
       
       {/* Gloss Effect */}
-      <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent skew-x-12 translate-x-1/2 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent skew-x-12 translate-x-1/2 pointer-events-none z-20" />
+
+      {/* Elemental VFX Layer */}
+      <ElementalVFX 
+        element={element} 
+        active={isRevealed && !disabled} 
+        className="absolute inset-0 z-0 opacity-40 group-hover:opacity-100 transition-opacity duration-500" 
+      />
 
       {/* Header: Element Type */}
-      <div className="w-full flex justify-between items-center relative z-10">
+      <div className="w-full flex justify-between items-center relative z-10 px-1">
          <span className={cn("font-black uppercase tracking-[0.2em] italic", size === 'sm' ? 'text-[7px]' : 'text-[9px]', config.text)}>
             {size === 'sm' ? element.substring(0, 3) : element}
          </span>

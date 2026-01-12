@@ -35,6 +35,7 @@ export enum RoomStatus {
 
 export interface Room {
   code: string;
+  maxPlayers: number;
   status: RoomStatus;
   players: Record<string, Player>;
   hostId: string;
@@ -64,6 +65,10 @@ interface GameState {
   getRooms: () => void;
   backToLobby: () => void;
   logout: () => void;
+  
+  // I18n
+  language: 'en' | 'vi';
+  setLanguage: (lang: 'en' | 'vi') => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -73,6 +78,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   roomsList: [],
   isConnected: false,
   lastLeftRoomCode: null,
+  
+  language: 'vi',
+  setLanguage: (lang) => set({ language: lang }),
 
   connect: () => {
     if (get().socket) return;

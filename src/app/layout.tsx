@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${outfit.variable} font-outfit antialiased bg-[#020617]`}>
+      <body className={`${outfit.variable} font-outfit antialiased bg-[#020617]`} suppressHydrationWarning>
         {children}
         <Toaster position="top-center" richColors theme="dark" closeButton />
       </body>
