@@ -18,9 +18,9 @@ export default function RoomPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (room) {
-        localStorage.setItem('zoka_current_room', room.code);
+        sessionStorage.setItem('zoka_current_room', room.code);
       } else {
-        localStorage.removeItem('zoka_current_room');
+        sessionStorage.removeItem('zoka_current_room');
       }
     }
   }, [room]);
@@ -33,9 +33,9 @@ export default function RoomPage() {
 
   useEffect(() => {
     if (isConnected && username && !room) {
-      const savedRoom = localStorage.getItem('zoka_current_room');
+      const savedRoom = sessionStorage.getItem('zoka_current_room');
       const targetRoom = (id as string) || savedRoom;
-      
+
       // If we just left this room, don't try to re-join it.
       if (targetRoom && targetRoom === lastLeftRoomCode) {
         router.push('/dashboard');

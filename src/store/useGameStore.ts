@@ -52,7 +52,7 @@ interface GameState {
   roomsList: any[];
   isConnected: boolean;
   lastLeftRoomCode: string | null;
-  
+
   connect: () => void;
   setUsername: (username: string) => void;
   createRoom: (maxPlayers: number) => void;
@@ -65,7 +65,7 @@ interface GameState {
   getRooms: () => void;
   backToLobby: () => void;
   logout: () => void;
-  
+
   // I18n
   language: 'en' | 'vi';
   setLanguage: (lang: 'en' | 'vi') => void;
@@ -73,12 +73,12 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set, get) => ({
   socket: null,
-  username: typeof window !== 'undefined' ? localStorage.getItem('zoka_username') || '' : '',
+  username: typeof window !== 'undefined' ? sessionStorage.getItem('zoka_username') || '' : '',
   room: null,
   roomsList: [],
   isConnected: false,
   lastLeftRoomCode: null,
-  
+
   language: 'vi',
   setLanguage: (lang) => set({ language: lang }),
 
@@ -88,7 +88,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     socket.on('connect', () => set({ isConnected: true }));
     socket.on('disconnect', () => set({ isConnected: false }));
-    
+
     socket.on('ROOM_UPDATED', (room) => set({ room }));
     socket.on('ROOM_LIST', (roomsList) => set({ roomsList }));
     socket.on('GAME_STARTED', (room) => set({ room }));
@@ -118,7 +118,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   setUsername: (username: string) => {
     set({ username });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('zoka_username', username);
+      sessionStorage.setItem('zoka_username', username);
     }
     get().socket?.emit('ENTER_USERNAME', { username });
   },
@@ -148,7 +148,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       get().socket?.emit('LEAVE_ROOM');
       set({ room: null, lastLeftRoomCode: currentRoom.code });
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('zoka_current_room');
+        sessionStorage.removeItem('zoka_current_room');
       }
       // Reset the flag after 2 seconds to allow re-joining the same room later if desired
       setTimeout(() => set({ lastLeftRoomCode: null }), 2000);
@@ -186,8 +186,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   logout: () => {
     set({ username: '', room: null });
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('zoka_username');
-      localStorage.removeItem('zoka_current_room');
+      sessionStorage.removeItem('zoka_username');
+      sessionStorage.removeItem('zoka_current_room');
     }
   },
 }));
