@@ -13,9 +13,9 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (room) {
-        localStorage.setItem('zoka_current_room', room.code);
+        sessionStorage.setItem('zoka_current_room', room.code);
       } else {
-        localStorage.removeItem('zoka_current_room');
+        sessionStorage.removeItem('zoka_current_room');
       }
     }
   }, [room]);
@@ -28,7 +28,7 @@ export default function Home() {
 
   useEffect(() => {
     if (isConnected && username && !room) {
-      const savedRoom = localStorage.getItem('zoka_current_room');
+      const savedRoom = sessionStorage.getItem('zoka_current_room');
       if (savedRoom && savedRoom !== lastLeftRoomCode) {
         joinRoom(savedRoom);
       }
@@ -38,7 +38,7 @@ export default function Home() {
   return (
     <main className="min-h-screen overflow-x-hidden">
       <Dashboard />
-      
+
       {/* Ambient background particles/glows */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-float" />
