@@ -87,15 +87,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL ||
       //'http://localhost:3001';
       'https://zoka-card-server.onrender.com';
-    const socket = io(SOCKET_URL, {
-      autoConnect: false,
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      randomizationFactor: 0.5,
-      transports: ['websocket']
-    });
+    const socket = io(SOCKET_URL);
 
     socket.on('connect', () => set({ isConnected: true }));
     socket.on('disconnect', () => set({ isConnected: false }));
