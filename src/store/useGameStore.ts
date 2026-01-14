@@ -52,7 +52,7 @@ interface GameState {
   roomsList: any[];
   isConnected: boolean;
   lastLeftRoomCode: string | null;
-  
+
   connect: () => void;
   setUsername: (username: string) => void;
   createRoom: (maxPlayers: number) => void;
@@ -65,7 +65,7 @@ interface GameState {
   getRooms: () => void;
   backToLobby: () => void;
   logout: () => void;
-  
+
   // I18n
   language: 'en' | 'vi';
   setLanguage: (lang: 'en' | 'vi') => void;
@@ -78,17 +78,28 @@ export const useGameStore = create<GameState>((set, get) => ({
   roomsList: [],
   isConnected: false,
   lastLeftRoomCode: null,
-  
+
   language: 'vi',
   setLanguage: (lang) => set({ language: lang }),
 
   connect: () => {
     if (get().socket) return;
-    const socket = io('http://localhost:3001');
+    const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL ||
+      //'http://localhost:3001';
+      'https://zoka-card-server.onrender.com';
+    const socket = io(SOCKET_URL, {
+      autoConnect: false,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
+      transports: ['websocket']
+    });
 
     socket.on('connect', () => set({ isConnected: true }));
     socket.on('disconnect', () => set({ isConnected: false }));
-    
+
     socket.on('ROOM_UPDATED', (room) => set({ room }));
     socket.on('ROOM_LIST', (roomsList) => set({ roomsList }));
     socket.on('GAME_STARTED', (room) => set({ room }));
